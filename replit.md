@@ -1,0 +1,62 @@
+# Log Analyzer Application
+
+## Overview
+Full-stack web application for log analysis using Java Spring Boot backend, React TypeScript frontend, and ClickHouse database integration. The application uses DeepSeek API for intelligent log analysis through a two-step process:
+
+1. **SQL Generation**: Converts natural language queries to SQL using log patterns and database structure
+2. **Log Analysis**: Analyzes retrieved logs to provide human-readable insights
+
+## Architecture
+- **Backend**: Java Spring Boot with REST API
+- **Frontend**: React TypeScript with Vite
+- **Database**: ClickHouse for log storage and analysis
+- **AI Integration**: DeepSeek API for natural language processing
+
+## Project Structure
+```
+├── src/main/java/com/loganalyzer/     # Java backend source
+│   ├── controller/                    # REST API controllers
+│   ├── service/                      # Business logic
+│   ├── model/                        # Data models
+│   ├── repository/                   # Database access
+│   ├── dto/                         # Data transfer objects
+│   └── config/                      # Configuration classes
+├── src/                             # React frontend source
+│   ├── components/                  # React components
+│   ├── types.ts                     # TypeScript types
+│   └── api.ts                       # API client
+├── pom.xml                          # Maven dependencies
+└── package.json                     # Node.js dependencies
+```
+
+## Recent Changes
+- ✅ Complete project setup with full-stack architecture
+- ✅ Implemented two-step DeepSeek integration for log analysis:
+  1. SQL Generation: Converts natural language to SQL queries
+  2. Log Analysis: Analyzes retrieved logs for human-readable insights
+- ✅ Created CRUD operations for log patterns and settings management
+- ✅ Built responsive React frontend with Query and Settings tabs
+- ✅ Configured H2 database for development (ClickHouse alternative)
+- ✅ Sample log patterns automatically created on startup
+- ✅ Both frontend (port 5000) and backend (port 8080) successfully running
+
+## API Endpoints
+- `GET /api/patterns` - Retrieve all log patterns
+- `POST /api/patterns` - Create new log pattern
+- `PUT /api/patterns/{id}` - Update existing pattern
+- `DELETE /api/patterns/{id}` - Delete pattern
+- `GET /api/settings/deepseek_api_key` - Get current API key (masked)
+- `POST /api/settings/deepseek_api_key` - Save/update API key
+- `POST /api/query` - Process natural language query for log analysis
+
+## User Preferences
+- Real ClickHouse connection (no mocking)
+- Java backend with Spring Boot
+- Two-step log analysis process using DeepSeek API
+- Clean, responsive React frontend
+
+## Development Setup
+- Frontend runs on port 5000
+- Backend runs on port 8080
+- ClickHouse expected on port 8123
+- CORS configured for development
