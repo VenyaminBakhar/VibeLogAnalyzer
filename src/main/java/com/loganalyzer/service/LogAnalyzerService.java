@@ -60,6 +60,13 @@ public class LogAnalyzerService {
             List<LogEntry> relevantLogs = executeLogQuery(sqlQuery);
             logger.info("Found {} relevant logs using generated SQL", relevantLogs.size());
             
+            // Check if no relevant logs were found
+            if (relevantLogs.isEmpty()) {
+                String noResultsMessage = "К сожалению мне не удалось найти информацию по запросу. Попробуйте добавить больше деталей";
+                logger.info("No relevant logs found for query: {}", userQuery);
+                return new QueryResponse(noResultsMessage, relevantLogs);
+            }
+            
             // Step 2: Analyze the logs using DeepSeek
             logger.info("Step 2: Analyzing logs with DeepSeek");
             String analysis = deepSeekService.analyzeLogs(userQuery, relevantLogs, apiKey);
