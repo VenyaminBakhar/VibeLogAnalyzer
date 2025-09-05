@@ -111,16 +111,9 @@ const SettingsTab: React.FC = () => {
   // Log Entry handlers
   const handleSaveLogEntry = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted with data:', newLogEntry);
-    console.log('Validation check:', { logLevel: !!newLogEntry.logLevel, message: !!newLogEntry.message });
-    
-    if (!newLogEntry.logLevel || !newLogEntry.message) {
-      console.log('Validation failed');
-      return;
-    }
+    if (!newLogEntry.logLevel || !newLogEntry.message) return;
 
     try {
-      console.log('Calling API with:', newLogEntry);
       await logEntryApi.create(newLogEntry);
       setNewLogEntry({ 
         timestamp: new Date().toISOString().slice(0, 16), 
@@ -130,7 +123,6 @@ const SettingsTab: React.FC = () => {
       setMessage({ type: 'success', text: 'Log entry saved successfully!' });
       loadLogEntries();
     } catch (error: any) {
-      console.error('API Error:', error);
       setMessage({ type: 'error', text: 'Error saving log entry: ' + error.message });
     }
   };
