@@ -35,7 +35,7 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
   1. SQL Generation: New optimized PostgreSQL-compatible prompt with structured approach (analysis → build → validate → optimize)
   2. Log Analysis: Analyzes retrieved logs for human-readable insights
 - ✅ **UPDATED**: PostgreSQL compatibility mode for H2 database (MODE=PostgreSQL)
-- ✅ **UPDATED**: Enhanced SQL generation prompt with ILIKE, CTE support, and advanced PostgreSQL functions
+- ✅ **UPDATED**: Enhanced SQL generation prompt with H2-specific REGEXP_SUBSTR functions, ILIKE, and CTE support
 - ✅ Created CRUD operations for log patterns and settings management
 - ✅ Added CRUD operations for log entries management in Settings tab
 - ✅ Built responsive React frontend with Query and Settings tabs
