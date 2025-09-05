@@ -170,18 +170,26 @@ public class LogAnalyzerService {
                 LogEntry entry = new LogEntry();
                 
                 // Map database columns to LogEntry fields
-                // Assuming query returns: id, log_level, message, timestamp
+                // Assuming query returns: id, timestamp, log_level, message (H2 column order)
                 if (row.length >= 4) {
-                    entry.setId(((BigInteger) row[0]).longValue());
-                    entry.setLogLevel((String) row[1]);
-                    entry.setMessage((String) row[2]);
-                    
-                    // Handle timestamp conversion
-                    if (row[3] instanceof Timestamp) {
-                        entry.setTimestamp(((Timestamp) row[3]).toLocalDateTime());
-                    } else if (row[3] instanceof LocalDateTime) {
-                        entry.setTimestamp((LocalDateTime) row[3]);
+                    // Handle ID casting - H2 returns Long, not BigInteger
+                    if (row[0] instanceof Long) {
+                        entry.setId((Long) row[0]);
+                    } else if (row[0] instanceof BigInteger) {
+                        entry.setId(((BigInteger) row[0]).longValue());
+                    } else if (row[0] instanceof Integer) {
+                        entry.setId(((Integer) row[0]).longValue());
                     }
+                    
+                    // Handle timestamp conversion (H2 returns Timestamp)
+                    if (row[1] instanceof Timestamp) {
+                        entry.setTimestamp(((Timestamp) row[1]).toLocalDateTime());
+                    } else if (row[1] instanceof LocalDateTime) {
+                        entry.setTimestamp((LocalDateTime) row[1]);
+                    }
+                    
+                    entry.setLogLevel((String) row[2]);
+                    entry.setMessage((String) row[3]);
                 }
                 
                 logEntries.add(entry);
