@@ -32,16 +32,19 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
 ## Recent Changes
 - ✅ Complete project setup with full-stack architecture
 - ✅ Implemented advanced two-step DeepSeek integration for log analysis:
-  1. SQL Generation: Advanced prompt with step-by-step analysis, CTEs, JOINs, and H2-optimized functions
+  1. SQL Generation: New optimized PostgreSQL-compatible prompt with structured approach (analysis → build → validate → optimize)
   2. Log Analysis: Analyzes retrieved logs for human-readable insights
+- ✅ **UPDATED**: PostgreSQL compatibility mode for H2 database (MODE=PostgreSQL)
+- ✅ **UPDATED**: Enhanced SQL generation prompt with ILIKE, CTE support, and advanced PostgreSQL functions
 - ✅ Created CRUD operations for log patterns and settings management
 - ✅ Added CRUD operations for log entries management in Settings tab
 - ✅ Built responsive React frontend with Query and Settings tabs
-- ✅ Configured H2 in-memory database for all data storage  
+- ✅ H2 database with PostgreSQL compatibility for advanced SQL support
 - ✅ Clean database setup - no auto-generated sample data
 - ✅ Both frontend (port 5000) and backend (port 8080) successfully running
 - ✅ All entities (LogEntry, LogPattern, AppSetting) with JPA annotations
 - ✅ Complete REST API endpoints for all CRUD operations
+- ✅ Fixed ClassCastException issues with SQL query execution
 
 ## API Endpoints
 - `GET /api/patterns` - Retrieve all log patterns

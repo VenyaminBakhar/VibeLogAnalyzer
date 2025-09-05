@@ -56,90 +56,111 @@ public class DeepSeekService {
 
     private String buildSqlGenerationPrompt(String userQuery, List<LogPattern> patterns) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("Ты — помощник для генерации SQL-запросов к базе данных H2, где хранятся логи в таблице log_entries.\n\n");
-        prompt.append("Твоя задача: по пользовательскому запросу строить корректный SQL, который находит релевантные записи логов, основываясь исключительно на предоставленных шаблонах логов и структуре таблицы.\n\n");
+        prompt.append("Ты — умный помощник для генерации SQL-запросов к базе данных PostgreSQL. В таблице log_entries хранятся журналы логирования.\n");
+        prompt.append("Твоя задача\n\n");
+        prompt.append("По пользовательскому запросу построить корректный, оптимизированный SQL-запрос, который найдет только релевантные записи логов. При генерации запроса ты обязан анализировать предоставленные шаблоны логов и структуру таблицы.\n\n");
         
-        prompt.append("🔑 Основные правила построения SQL\n\n");
-        
-        prompt.append("1. Анализ пользовательского запроса\n");
-        prompt.append("   • Определи ключевые сущности (например: userId, requestId, userName, email, sessionId) и действия, о которых спрашивает пользователь (например: отправка сообщения, логин).\n");
-        prompt.append("   • Используй только те сущности и ключи, которые гарантированно встречаются в логах по предоставленным шаблонам.\n");
-        prompt.append("   • Не добавляй условий фильтрации по ключам, отсутствующим в логах.\n");
-        prompt.append("   • ❌ Нельзя: добавлять UPPER(message) LIKE '%ip=%', если в шаблонах нет ip=.\n");
-        prompt.append("   • ✅ Можно: использовать UPPER(message) LIKE '%logged in from%', если это есть в шаблоне.\n\n");
-        
-        prompt.append("2. Зависимости между логами\n");
-        prompt.append("   • Если для ответа нужно связывать логи по requestId, id, sessionId, используй CTE (WITH …) для предварительного извлечения значений.\n");
-        prompt.append("   • Для связи таблиц внутри log_entries используй JOIN или IN, но только по данным, которые точно есть в шаблонах.\n");
-        prompt.append("   • ❌ Запрещено выдумывать дополнительные поля (например, transactionId), если их нет в шаблонах.\n\n");
-        
-        prompt.append("3. Извлечение значений из message\n");
-        prompt.append("   • Для извлечения данных из строки используй H2-функции с регэкспами:\n");
-        prompt.append("     - REGEXP_SUBSTR(message, 'ключ=([^ ]+)', 1, 1, '', 1)\n");
-        prompt.append("     - SUBSTRING(message FROM 'ключ=([^ ]+)')\n");
-        prompt.append("   • Все значения трактуй как строки.\n\n");
-        
-        prompt.append("4. Фильтрация\n");
-        prompt.append("   • Для поиска подстрок используй UPPER(message) LIKE UPPER('%pattern%') (регистронезависимый LIKE).\n");
-        prompt.append("   • Для множественных возможных значений — IN.\n");
-        prompt.append("   • Для плейсхолдеров ({} в коде) используй подстановку %.\n");
-        prompt.append("   • Всегда опирайся только на реально встречающиеся подстроки из шаблонов.\n\n");
-        
-        prompt.append("5. Результат\n");
-        prompt.append("   • Всегда выводи: SELECT id, timestamp, log_level, message\n");
-        prompt.append("   • Обязательно добавляй: ORDER BY timestamp DESC;\n\n");
-        
-        prompt.append("📖 Примеры\n\n");
-        prompt.append("Пример 1. Прямой поиск по id\n");
-        prompt.append("Шаблоны:\n");
-        prompt.append("logger.info(\"start send message for userName={} and id={}\", user.getName(), user.getId());\n");
-        prompt.append("logger.info(\"message send completed for id={}\", user.getId());\n");
-        prompt.append("logger.error(\"message send failed for id={}\", user.getId());\n\n");
-        prompt.append("Запрос пользователя: «Отправилось ли сообщение пользователю с id 111?»\n\n");
-        prompt.append("SQL:\n");
-        prompt.append("SELECT id, timestamp, log_level, message\n");
-        prompt.append("FROM log_entries\n");
-        prompt.append("WHERE UPPER(message) LIKE UPPER('%id=111%')\n");
-        prompt.append("ORDER BY timestamp DESC;\n\n");
-        
-        prompt.append("Пример 2. Использование зависимостей (связка через requestId)\n");
-        prompt.append("Шаблоны:\n");
-        prompt.append("logger.info(\"start send message. userId={}, requestId={}\", user.getId(), requestId);\n");
-        prompt.append("logger.info(\"send completed success. requestId={}\", requestId);\n");
-        prompt.append("logger.warn(\"send failed. requestId={}\", requestId);\n\n");
-        prompt.append("Запрос пользователя: «Доставлено ли сообщение для пользователя с userId=abc-123-uuid?»\n\n");
-        prompt.append("SQL:\n");
-        prompt.append("WITH request_ids AS (\n");
-        prompt.append("  SELECT REGEXP_SUBSTR(message, 'requestId=([^ ]+)', 1, 1, '', 1) AS requestId\n");
-        prompt.append("  FROM log_entries\n");
-        prompt.append("  WHERE UPPER(message) LIKE UPPER('%start send message. userid=abc-123-uuid%')\n");
-        prompt.append(")\n");
-        prompt.append("SELECT l.id, l.timestamp, l.log_level, l.message\n");
-        prompt.append("FROM log_entries l\n");
-        prompt.append("JOIN request_ids r ON UPPER(l.message) LIKE UPPER('%' || r.requestId || '%')\n");
-        prompt.append("WHERE UPPER(l.message) LIKE UPPER('%send completed success.%')\n");
-        prompt.append("   OR UPPER(l.message) LIKE UPPER('%send failed.%')\n");
-        prompt.append("   OR UPPER(l.message) LIKE UPPER('%start send message.%')\n");
-        prompt.append("ORDER BY l.timestamp DESC;\n\n");
-        
-        prompt.append("🎯 Итог\n");
-        prompt.append("Всегда:\n");
-        prompt.append("• Используй только реально существующие подстроки и ключи из шаблонов.\n");
-        prompt.append("• Верни только 1 sql запрос, который точно поможет найти релевантные логи.\n");
-        prompt.append("• Не придумывай новые поля.\n");
-        prompt.append("• Возвращай id, timestamp, log_level, message с ORDER BY timestamp DESC.\n\n");
-        
-        prompt.append("Данные для генерации:\n");
-        prompt.append("Структура таблицы log_entries:\n");
+        prompt.append("Таблица log_entries имеет структуру:\n");
         prompt.append("id BIGINT,\n");
         prompt.append("timestamp TIMESTAMP,\n");
         prompt.append("log_level VARCHAR,\n");
         prompt.append("message VARCHAR\n\n");
         
+        prompt.append("🔑 План построения SQL\n\n");
+        prompt.append("1. Анализ пользовательского запроса и лог‑шаблонов\n\n");
+        prompt.append("    Определи ключевые сущности в запросе: userId, requestId, userName, email, sessionId, ipAddress и т.п.\n");
+        prompt.append("    Определи релевантные действия (например: «отправка сообщения», «логин», «ошибка»).\n");
+        prompt.append("    Сопоставь их только с реально существующими полями из шаблонов.\n");
+        prompt.append("    Никогда не придумывай новых ключей или дополнительных полей.\n\n");
+        
+        prompt.append("2. Построение SQL‑запроса\n\n");
+        prompt.append("    Если данные можно сразу достать из логов фильтрацией по message, построй прямой запрос с ILIKE.\n");
+        prompt.append("    Если для ответа нужно связать разные логи (например, через requestId, id или sessionId), используй CTE (WITH …) для первичного извлечения значений.\n");
+        prompt.append("    Для извлечения значений из строки message применяй regexp_matches или substring.\n");
+        prompt.append("    Используй только те ключи и подстроки, которые явно встречаются в шаблонах логов.\n\n");
+        
+        prompt.append("3. Валидация SQL‑запроса\n\n");
+        prompt.append("    Проверь, что синтаксис SQL корректный.\n");
+        prompt.append("    Учти регистр и особенности работы PostgreSQL (например, строки должны сравниваться через ILIKE).\n");
+        prompt.append("    Проверь, что фильтрация и JOIN сделаны только по реально существующим данным.\n\n");
+        
+        prompt.append("4. Оптимизация SQL‑запроса\n\n");
+        prompt.append("    Убедись, что нет дублирующихся условий.\n");
+        prompt.append("    Убери нерелевантные проверки (ILIKE '%text%' без необходимости).\n");
+        prompt.append("    Проверяй, чтобы запрос выбирал только нужные строки, а не слишком широкий диапазон.\n\n");
+        
+        prompt.append("🔎 Правила для финального SQL\n\n");
+        prompt.append("    Результат всегда должен содержать:\n\n");
+        prompt.append("SELECT id, timestamp, log_level, message\n");
+        prompt.append("FROM log_entries\n");
+        prompt.append("...\n");
+        prompt.append("ORDER BY timestamp DESC;\n\n");
+        
+        prompt.append("    Не придумывай новые поля (например, transactionId).\n");
+        prompt.append("    Не используй условия, отсутствующие в шаблонах логов.\n");
+        prompt.append("    Допускается использование WITH … для сложных связей.\n");
+        prompt.append("    Для подстрочного поиска — всегда ILIKE, для множественных значений — IN.\n\n");
+        
+        prompt.append("📖 Примеры\n\n");
+        prompt.append("Пример 1. Прямой поиск по id\n\n");
+        prompt.append("Шаблоны:\n");
+        prompt.append("logger.info(\"start send message for userName={} and id={}\", user.getName(), user.getId());\n");
+        prompt.append("logger.info(\"created message for userName={} and id={}\", user.getName(), user.getId());\n");
+        prompt.append("logger.info(\"system healthcheck. status=working\");\n");
+        prompt.append("logger.info(\"message send completed for id={}\", user.getId());\n");
+        prompt.append("logger.error(\"message send failed for id={}\", user.getId());\n\n");
+        prompt.append("Запрос пользователя:\n");
+        prompt.append("«Отправилось ли сообщение пользователю с id 111?»\n\n");
+        prompt.append("SQL:\n");
+        prompt.append("SELECT id, timestamp, log_level, message\n");
+        prompt.append("FROM log_entries\n");
+        prompt.append("WHERE message ILIKE '%id=111%'\n");
+        prompt.append("ORDER BY timestamp DESC;\n\n");
+        
+        prompt.append("Пример 2. Использование зависимостей (связка через requestId)\n\n");
+        prompt.append("Шаблоны:\n");
+        prompt.append("logger.info(\"start send message. userId={}, requestId={}\", user.getId(), requestId);\n");
+        prompt.append("logger.info(\"send completed success. requestId={}\", requestId);\n");
+        prompt.append("logger.warn(\"send failed. requestId={}\", requestId);\n\n");
+        prompt.append("Запрос пользователя:\n");
+        prompt.append("«Доставлено ли сообщение для пользователя с userId=abc-123-uuid?»\n\n");
+        prompt.append("SQL:\n");
+        prompt.append("WITH request_ids AS (\n");
+        prompt.append("  SELECT substring(message from 'requestId=([^ ]+)') AS requestId\n");
+        prompt.append("  FROM log_entries\n");
+        prompt.append("  WHERE message ILIKE '%start send message. userid=abc-123-uuid%'\n");
+        prompt.append(")\n");
+        prompt.append("SELECT l.id, l.timestamp, l.log_level, l.message\n");
+        prompt.append("FROM log_entries l\n");
+        prompt.append("JOIN request_ids r ON l.message LIKE '%' || r.requestId || '%'\n");
+        prompt.append("WHERE l.message ILIKE '%send completed success.%'\n");
+        prompt.append("   OR l.message ILIKE '%send failed.%'\n");
+        prompt.append("   OR l.message ILIKE '%start send message.%'\n");
+        prompt.append("ORDER BY l.timestamp DESC;\n\n");
+        
+        prompt.append("Пример 3. Логирование входа через IP\n\n");
+        prompt.append("Шаблоны:\n");
+        prompt.append("logger.info(\"User {} logged in from {}\", user.getName(), ipAddress);\n");
+        prompt.append("logger.error(\"Database connection failed: {}\", ex.getCause());\n");
+        prompt.append("logger.warn(\"High memory usage detected: {}%\", memoryPercent);\n\n");
+        prompt.append("Запрос пользователя:\n");
+        prompt.append("«what john_doe log ip?»\n\n");
+        prompt.append("SQL:\n");
+        prompt.append("SELECT id, timestamp, log_level, message\n");
+        prompt.append("FROM log_entries\n");
+        prompt.append("WHERE message ILIKE '%User john_doe logged in from%'\n");
+        prompt.append("ORDER BY timestamp DESC;\n\n");
+        
+        prompt.append("🎯 Результат\n\n");
+        prompt.append("    Используй пошаговый план (анализ, построение, валидация, оптимизация).\n");
+        prompt.append("    Верни только один окончательный SQL‑запрос, полностью готовый к выполнению и без промежуточных результатов.\n");
+        prompt.append("    Запрос должен соответствовать реальным шаблонам из кода и находить только релевантные записи.\n\n");
+        
+        prompt.append("📥 Данные для генерации\n\n");
         prompt.append("Запрос пользователя:\n");
         prompt.append(userQuery).append("\n\n");
         
-        prompt.append("Шаблоны логов из кода:\n");
+        prompt.append("Шаблоны логов:\n");
         for (LogPattern pattern : patterns) {
             prompt.append(pattern.getLogTemplate()).append("\n");
         }
