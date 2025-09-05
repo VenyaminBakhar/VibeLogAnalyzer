@@ -1,5 +1,6 @@
 package com.loganalyzer.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -11,6 +12,7 @@ public class LogEntry {
     private Long id;
     
     @Column(nullable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime timestamp;
     
     @Column(nullable = false)
