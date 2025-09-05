@@ -97,4 +97,20 @@ public class LogAnalyzerService {
     public void initializeDatabase() {
         repository.initializeTables();
     }
+
+    // Log Entries CRUD
+    public List<LogEntry> getAllLogEntries() {
+        return repository.findAllLogEntries();
+    }
+
+    public LogEntry saveLogEntry(LogEntry logEntry) {
+        if (logEntry.getTimestamp() == null) {
+            logEntry.setTimestamp(java.time.LocalDateTime.now());
+        }
+        return repository.saveLogEntry(logEntry);
+    }
+
+    public void deleteLogEntry(Long id) {
+        repository.deleteLogEntry(id);
+    }
 }

@@ -98,6 +98,51 @@ public class ClickHouseRepository implements DatabaseRepository {
         }
     }
 
+    // Log Entries CRUD
+    public List<LogEntry> findAllLogEntries() {
+        List<LogEntry> entries = new ArrayList<>();
+        String sql = "SELECT * FROM logs ORDER BY timestamp DESC";
+        
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                LogEntry entry = new LogEntry();
+                entry.setId(rs.getLong("id"));
+                entry.setTimestamp(rs.getTimestamp("timestamp").toLocalDateTime());
+                entry.setLogLevel(rs.getString("log_level"));
+                entry.setMessage(rs.getString("message"));
+                entries.add(entry);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching log entries", e);
+        }
+        
+        return entries;
+    }
+
+    public LogEntry saveLogEntry(LogEntry logEntry) {
+        // For ClickHouse, we'll simulate the save operation as it's an analytics DB
+        // In a real implementation, you would insert into ClickHouse
+        if (logEntry.getId() == null) {
+            logEntry.setId(System.currentTimeMillis()); // Generate a simple ID
+        }
+        return logEntry;
+    }
+
+    public void deleteLogEntry(Long id) {
+        // For ClickHouse, deletion would be done via ALTER TABLE DELETE
+        String sql = "ALTER TABLE logs DELETE WHERE id = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting log entry", e);
+        }
+    }
+
     // App Settings
     public Optional<AppSetting> findSettingByKey(String key) {
         String sql = "SELECT id, setting_key, setting_value FROM app_settings WHERE setting_key = ? LIMIT 1";

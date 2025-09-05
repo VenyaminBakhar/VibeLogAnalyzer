@@ -11,6 +11,9 @@ public interface DatabaseRepository {
     List<LogPattern> findAllLogPatterns();
     LogPattern saveLogPattern(LogPattern pattern);
     void deleteLogPattern(Long id);
+    List<LogEntry> findAllLogEntries();
+    LogEntry saveLogEntry(LogEntry logEntry);
+    void deleteLogEntry(Long id);
     Optional<AppSetting> findSettingByKey(String key);
     AppSetting saveSetting(AppSetting setting);
     List<LogEntry> executeLogQuery(String sql);

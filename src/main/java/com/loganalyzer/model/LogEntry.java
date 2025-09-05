@@ -1,11 +1,22 @@
 package com.loganalyzer.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "log_entries")
 public class LogEntry {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @Column(nullable = false)
     private LocalDateTime timestamp;
+    
+    @Column(nullable = false)
     private String logLevel;
+    
+    @Column(nullable = false, length = 2000)
     private String message;
 
     public LogEntry() {}

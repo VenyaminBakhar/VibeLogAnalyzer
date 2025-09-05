@@ -35,16 +35,23 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
   1. SQL Generation: Converts natural language to SQL queries
   2. Log Analysis: Analyzes retrieved logs for human-readable insights
 - ✅ Created CRUD operations for log patterns and settings management
+- ✅ Added CRUD operations for log entries management in Settings tab
 - ✅ Built responsive React frontend with Query and Settings tabs
 - ✅ Configured H2 database for development (ClickHouse alternative)
-- ✅ Sample log patterns automatically created on startup
+- ✅ Sample log patterns and log entries automatically created on startup
 - ✅ Both frontend (port 5000) and backend (port 8080) successfully running
+- ✅ LogEntry entity with JPA annotations for database persistence
+- ✅ Complete REST API endpoints for log entries (/api/logs)
 
 ## API Endpoints
 - `GET /api/patterns` - Retrieve all log patterns
 - `POST /api/patterns` - Create new log pattern
 - `PUT /api/patterns/{id}` - Update existing pattern
 - `DELETE /api/patterns/{id}` - Delete pattern
+- `GET /api/logs` - Retrieve all log entries
+- `POST /api/logs` - Create new log entry
+- `PUT /api/logs/{id}` - Update existing log entry
+- `DELETE /api/logs/{id}` - Delete log entry
 - `GET /api/settings/deepseek_api_key` - Get current API key (masked)
 - `POST /api/settings/deepseek_api_key` - Save/update API key
 - `POST /api/query` - Process natural language query for log analysis

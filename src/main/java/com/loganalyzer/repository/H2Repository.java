@@ -99,6 +99,83 @@ public class H2Repository implements DatabaseRepository {
         }
     }
 
+    // Log Entries CRUD
+    public List<LogEntry> findAllLogEntries() {
+        List<LogEntry> entries = new ArrayList<>();
+        String sql = "SELECT * FROM logs ORDER BY timestamp DESC";
+        
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                LogEntry entry = new LogEntry();
+                entry.setId(rs.getLong("id"));
+                entry.setTimestamp(rs.getTimestamp("timestamp").toLocalDateTime());
+                entry.setLogLevel(rs.getString("log_level"));
+                entry.setMessage(rs.getString("message"));
+                entries.add(entry);
+            }
+        } catch (SQLException e) {
+            // Table might not exist yet
+            initializeTables();
+            return findAllLogEntries();
+        }
+        
+        return entries;
+    }
+
+    public LogEntry saveLogEntry(LogEntry logEntry) {
+        if (logEntry.getId() == null) {
+            // Insert new entry
+            String sql = "INSERT INTO logs (timestamp, log_level, message) VALUES (?, ?, ?)";
+            
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setTimestamp(1, java.sql.Timestamp.valueOf(logEntry.getTimestamp()));
+                stmt.setString(2, logEntry.getLogLevel());
+                stmt.setString(3, logEntry.getMessage());
+                stmt.executeUpdate();
+                
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        logEntry.setId(rs.getLong(1));
+                    }
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Error saving log entry", e);
+            }
+        } else {
+            // Update existing entry
+            String sql = "UPDATE logs SET timestamp = ?, log_level = ?, message = ? WHERE id = ?";
+            
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setTimestamp(1, java.sql.Timestamp.valueOf(logEntry.getTimestamp()));
+                stmt.setString(2, logEntry.getLogLevel());
+                stmt.setString(3, logEntry.getMessage());
+                stmt.setLong(4, logEntry.getId());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Error updating log entry", e);
+            }
+        }
+        
+        return logEntry;
+    }
+
+    public void deleteLogEntry(Long id) {
+        String sql = "DELETE FROM logs WHERE id = ?";
+        
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting log entry", e);
+        }
+    }
+
     // App Settings
     public Optional<AppSetting> findSettingByKey(String key) {
         String sql = "SELECT id, setting_key, setting_value FROM app_settings WHERE setting_key = ? LIMIT 1";
@@ -245,6 +322,37 @@ public class H2Repository implements DatabaseRepository {
                     
                     insertStmt.setString(1, "WARN");
                     insertStmt.setString(2, "logger.warn(\"Memory usage high: {}%\", percentage);");
+                    insertStmt.executeUpdate();
+                }
+            }
+        }
+        
+        // Insert sample log entries if none exist
+        String checkLogs = "SELECT COUNT(*) FROM logs";
+        try (PreparedStatement stmt = conn.prepareStatement(checkLogs);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Insert sample log entries
+                String insertLog = "INSERT INTO logs (timestamp, log_level, message) VALUES (?, ?, ?)";
+                try (PreparedStatement insertStmt = conn.prepareStatement(insertLog)) {
+                    insertStmt.setTimestamp(1, java.sql.Timestamp.valueOf(LocalDateTime.now().minusHours(1)));
+                    insertStmt.setString(2, "INFO");
+                    insertStmt.setString(3, "Application started successfully");
+                    insertStmt.executeUpdate();
+                    
+                    insertStmt.setTimestamp(1, java.sql.Timestamp.valueOf(LocalDateTime.now().minusMinutes(30)));
+                    insertStmt.setString(2, "INFO");
+                    insertStmt.setString(3, "User john_doe logged in");
+                    insertStmt.executeUpdate();
+                    
+                    insertStmt.setTimestamp(1, java.sql.Timestamp.valueOf(LocalDateTime.now().minusMinutes(15)));
+                    insertStmt.setString(2, "WARN");
+                    insertStmt.setString(3, "High memory usage detected: 85%");
+                    insertStmt.executeUpdate();
+                    
+                    insertStmt.setTimestamp(1, java.sql.Timestamp.valueOf(LocalDateTime.now().minusMinutes(5)));
+                    insertStmt.setString(2, "ERROR");
+                    insertStmt.setString(3, "Database connection timeout");
                     insertStmt.executeUpdate();
                 }
             }
