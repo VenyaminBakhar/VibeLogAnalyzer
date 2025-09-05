@@ -1,7 +1,7 @@
 # Log Analyzer Application
 
 ## Overview
-Full-stack web application for log analysis using Java Spring Boot backend, React TypeScript frontend, and ClickHouse database integration. The application uses DeepSeek API for intelligent log analysis through a two-step process:
+Full-stack web application for log analysis using Java Spring Boot backend, React TypeScript frontend, and H2 database. The application uses DeepSeek API for intelligent log analysis through a two-step process:
 
 1. **SQL Generation**: Converts natural language queries to SQL using log patterns and database structure
 2. **Log Analysis**: Analyzes retrieved logs to provide human-readable insights
@@ -9,7 +9,7 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
 ## Architecture
 - **Backend**: Java Spring Boot with REST API
 - **Frontend**: React TypeScript with Vite
-- **Database**: ClickHouse for log storage and analysis
+- **Database**: H2 in-memory database for log storage and analysis
 - **AI Integration**: DeepSeek API for natural language processing
 
 ## Project Structure
@@ -37,11 +37,11 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
 - ✅ Created CRUD operations for log patterns and settings management
 - ✅ Added CRUD operations for log entries management in Settings tab
 - ✅ Built responsive React frontend with Query and Settings tabs
-- ✅ Configured H2 database for development (ClickHouse alternative)
+- ✅ Configured H2 in-memory database for all data storage
 - ✅ Sample log patterns and log entries automatically created on startup
 - ✅ Both frontend (port 5000) and backend (port 8080) successfully running
-- ✅ LogEntry entity with JPA annotations for database persistence
-- ✅ Complete REST API endpoints for log entries (/api/logs)
+- ✅ All entities (LogEntry, LogPattern, AppSetting) with JPA annotations
+- ✅ Complete REST API endpoints for all CRUD operations
 
 ## API Endpoints
 - `GET /api/patterns` - Retrieve all log patterns
@@ -57,7 +57,7 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
 - `POST /api/query` - Process natural language query for log analysis
 
 ## User Preferences
-- Real ClickHouse connection (no mocking)
+- H2 database only for all data storage
 - Java backend with Spring Boot
 - Two-step log analysis process using DeepSeek API
 - Clean, responsive React frontend
@@ -65,5 +65,6 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
 ## Development Setup
 - Frontend runs on port 5000
 - Backend runs on port 8080
-- ClickHouse expected on port 8123
+- H2 in-memory database
+- H2 console available at /h2-console
 - CORS configured for development
