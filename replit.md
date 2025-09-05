@@ -37,8 +37,8 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
 - ✅ Created CRUD operations for log patterns and settings management
 - ✅ Added CRUD operations for log entries management in Settings tab
 - ✅ Built responsive React frontend with Query and Settings tabs
-- ✅ Configured H2 in-memory database for all data storage
-- ✅ Sample log patterns and log entries automatically created on startup
+- ✅ Configured H2 in-memory database for all data storage  
+- ✅ Clean database setup - no auto-generated sample data
 - ✅ Both frontend (port 5000) and backend (port 8080) successfully running
 - ✅ All entities (LogEntry, LogPattern, AppSetting) with JPA annotations
 - ✅ Complete REST API endpoints for all CRUD operations

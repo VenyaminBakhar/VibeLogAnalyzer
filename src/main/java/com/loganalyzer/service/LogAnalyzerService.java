@@ -119,40 +119,6 @@ public class LogAnalyzerService {
         }
     }
 
-    public void initializeDatabase() {
-        // JPA will auto-create tables, but we can add sample data here
-        initializeSampleData();
-    }
-
-    private void initializeSampleData() {
-        // Add sample log patterns if none exist
-        if (logPatternRepository.count() == 0) {
-            logPatternRepository.save(new LogPattern(null, "INFO", "User {user_id} logged in from {ip_address}"));
-            logPatternRepository.save(new LogPattern(null, "ERROR", "Database connection failed: {error_message}"));
-            logPatternRepository.save(new LogPattern(null, "WARN", "High memory usage detected: {memory_percent}%"));
-        }
-
-        // Add sample log entries if none exist
-        if (logEntryRepository.count() == 0) {
-            LogEntry entry1 = new LogEntry();
-            entry1.setTimestamp(java.time.LocalDateTime.now().minusHours(2));
-            entry1.setLogLevel("INFO");
-            entry1.setMessage("User john_doe logged in from 192.168.1.100");
-            logEntryRepository.save(entry1);
-
-            LogEntry entry2 = new LogEntry();
-            entry2.setTimestamp(java.time.LocalDateTime.now().minusHours(1));
-            entry2.setLogLevel("ERROR");
-            entry2.setMessage("Database connection failed: Connection timeout");
-            logEntryRepository.save(entry2);
-
-            LogEntry entry3 = new LogEntry();
-            entry3.setTimestamp(java.time.LocalDateTime.now().minusMinutes(30));
-            entry3.setLogLevel("WARN");
-            entry3.setMessage("High memory usage detected: 85%");
-            logEntryRepository.save(entry3);
-        }
-    }
 
     // Log Entries CRUD
     public List<LogEntry> getAllLogEntries() {
