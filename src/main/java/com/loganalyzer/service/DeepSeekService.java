@@ -60,7 +60,7 @@ public class DeepSeekService {
         prompt.append("Ты — ведущий системный аналитик и SQL-архитектор с глубокой экспертизой в анализе логов. Твоя специализация — база данных H2 (в режиме PostgreSQL). Ты действуешь полностью автономно, анализируешь задачу, делаешь обоснованные допущения по неясным запросам и всегда предоставляешь SQL-запрос, даже если данных недостаточно для идеального решения.\n\n");
         
         prompt.append("[ЦЕЛЬ]\n\n");
-        prompt.append("Твоя главная задача — преобразовать запрос пользователя на естественном языке в корректный, оптимальный и безопасный SQL-запрос для поиска наиболее релевантных записей в таблице log_entries. Ты должен вернуть SQL-запрос в любом случае, даже если для полного ответа не хватает данных.\n\n");
+        prompt.append("Твоя главная задача — преобразовать запрос пользователя на естественном языке в корректный, оптимальный и безопасный SQL-запрос. Итоговая цель этого SQL-запроса — извлечь все релевантные логи, которые помогут в дальнейшем анализе и ответе на запрос. Поэтому финальный SELECT всегда должен возвращать все колонки из таблицы log_entries.\n\n");
         
         prompt.append("[КОНТЕКСТ]\n\n");
         prompt.append("    База данных: H2 (mode=PostgreSQL)\n");
@@ -75,8 +75,7 @@ public class DeepSeekService {
         
         prompt.append("[КЛЮЧЕВЫЕ ПРИНЦИПЫ]\n\n");
         prompt.append("    Анализируй, а не предполагай: Всегда строй запрос на основе предоставленных шаблонов логов. Не додумывай несуществующие поля или форматы данных.\n");
-        prompt.append("    Безопасность прежде всего: Генерируй исключительно SELECT запросы. Команды, изменяющие данные (UPDATE, DELETE) или структуру (DROP), категорически запрещены.\n");
-        prompt.append("    Всегда объясняй свою логику: Ответ должен быть не просто кодом, а решением. Кратко поясняй, почему ты выбрал ту или иную стратегию, особенно если пришлось делать допущения.\n\n");
+        prompt.append("    Безопасность прежде всего: Генерируй исключительно SELECT запросы. Команды, изменяющие данные (UPDATE, DELETE) или структуру (DROP), категорически запрещены.\n\n");
         
         prompt.append("[ПОШАГОВЫЙ АЛГОРИТМ ДЕЙСТВИЙ]\n\n");
         prompt.append("Шаг 1: Анализ входных данных\n\n");
@@ -89,105 +88,80 @@ public class DeepSeekService {
         prompt.append("    Поиск по \"лучшему варианту\" (Fallback): Если построить полную цепочку событий невозможно (например, отсутствуют связующие ID) или запрос пользователя неясен, найди все логи, которые напрямую относятся к ключевой сущности из запроса.\n\n");
         
         prompt.append("Шаг 3: Построение SQL-запроса\n\n");
-        prompt.append("❗ Критически важное правило связывания сущностей\n\n");
+        prompt.append("❗️ Правило выборки полей\n");
+        prompt.append("Итоговый SELECT всегда должен возвращать все колонки из таблицы log_entries (SELECT id, timestamp, log_level, message...). Это необходимо для предоставления максимального контекста для анализа.\n\n");
+        prompt.append("❗️ Критически важное правило связывания сущностей\n");
         prompt.append("Разные атрибуты (например, CommunicationId и userId) часто фиксируются в разных строках логов и никогда не встречаются вместе.\n\n");
-        prompt.append("    НЕПРАВИЛЬНО: WHERE message ILIKE '%CommId=X%' AND message ILIKE '%userId=Y%'.\n");
+        prompt.append("    НЕПРАВИЛЬНО: WHERE message ILIKE '%CommId=X%' AND message ILIKE '%userId=Y%'.\n\n");
         prompt.append("    ПРАВИЛЬНО:\n");
         prompt.append("        Через CTE найди общий идентификатор (traceId, requestId) для первой сущности.\n");
         prompt.append("        В основном запросе используй найденные идентификаторы для фильтрации по второй сущности.\n\n");
-        prompt.append("Инструменты:\n\n");
-        prompt.append("    Фильтрация: WHERE message ILIKE '%текст%'.\n");
-        prompt.append("    Связывание: WITH ... AS (...) SELECT ...\n");
-        prompt.append("    Извлечение данных: Только REGEXP_SUBSTR(message, 'pattern').\n\n");
+        prompt.append("    Инструменты:\n");
+        prompt.append("        Фильтрация: WHERE message ILIKE '%текст%'.\n");
+        prompt.append("        Связывание: WITH ... AS (...) SELECT ...\n");
+        prompt.append("        Извлечение данных: Только REGEXP_SUBSTR(message, 'pattern').\n\n");
         
         prompt.append("[ПРАВИЛА ОБРАБОТКИ НЕОДНОЗНАЧНЫХ ЗАПРОСОВ]\n\n");
         prompt.append("    Никаких вопросов: Ты должен действовать автономно. Никогда не задавай пользователю уточняющих вопросов.\n");
         prompt.append("    Делай разумные допущения: Если запрос пользователя общий (например, «проблемы у пользователя Х»), сделай наиболее вероятное допущение. Как правило, это означает поиск логов с уровнями log_level IN ('ERROR', 'WARN'), связанных с этим пользователем.\n");
-        prompt.append("    Отступай к широкому поиску: Если точный запрос (например, статус доставки) составить невозможно, составь более общий запрос, который вернет все логи, связанные с главной сущностью запроса (например, все логи для userId). Обязательно объясни это в секции \"Анализ и логика\".\n\n");
+        prompt.append("    Отступай к широкому поиску: Если точный запрос (например, статус доставки) составить невозможно, составь более общий запрос, который вернет все логи, связанные с главной сущностью запроса (например, все логи для userId).\n\n");
         
         prompt.append("[ФОРМАТ ОТВЕТА]\n\n");
-        prompt.append("Ты обязан предоставить ответ строго в следующем формате, используя Markdown:\n\n");
-        prompt.append("Анализ и логика:\n");
-        prompt.append("Краткое объяснение выбранной стратегии. Если пришлось делать допущения или использовать fallback-логику, четко опиши это. (Пример: \"Так как статус доставки и userId находятся в разных логах, для их связи используется requestId через CTE. Запрос найдет всю цепочку событий.\") или (Пример: \"Запрос неоднозначен, поэтому ищем все проблемные логи для указанного пользователя.\")\n\n");
-        prompt.append("SQL-запрос:\n");
-        prompt.append("SELECT id, timestamp, log_level, message\n");
-        prompt.append("FROM log_entries\n");
-        prompt.append("WHERE ...\n");
-        prompt.append("ORDER BY timestamp DESC;\n\n");
-        prompt.append("Ограничения и допущения:\n");
-        prompt.append("    Укажи, при каких условиях запрос может вернуть неполные или не совсем точные данные. (Пример: \"Запрос вернет все логи с ошибками для данного пользователя, но не сможет показать другие события, которые привели к этим ошибкам.\")\n");
-        prompt.append("    Четко сформулируй сделанные тобой допущения.\n\n");
+        prompt.append("Ты обязан предоставить ответ строго в виде одного SQL-запроса и ничего более.\n");
+        prompt.append("Вывод должен быть чистым SQL-кодом, готовым к выполнению.\n");
+        prompt.append("Не включай в ответ никакого дополнительного текста, объяснений, комментариев или Markdown-форматирования (например, ```sql).\n\n");
         
         prompt.append("[ПРИМЕРЫ]\n\n");
-        prompt.append("Пример 1. Прямой поиск по id\n\n");
-        prompt.append("Шаблоны Java:\n");
-        prompt.append("logger.info(\"start send message for userName={} and id={}\", user.getName(), user.getId());\n");
-        prompt.append("logger.info(\"created message for userName={} and id={}\", user.getName(), user.getId());\n");
-        prompt.append("logger.info(\"message send completed for id={}\", user.getId());\n");
-        prompt.append("logger.error(\"message send failed for id={}\", user.getId());\n\n");
-        prompt.append("Запрос пользователя:\n");
-        prompt.append("«Отправилось ли сообщение пользователю с id 111?»\n\n");
-        prompt.append("Финальный ответ:\n\n");
-        prompt.append("Анализ и логика:\n");
-        prompt.append("В запросе есть конкретный id=111. Шаблоны логов показывают, что id присутствует прямо в сообщениях о статусе отправки. Следовательно, можно выполнить прямой поиск по подстроке без сложных конструкций.\n\n");
-        prompt.append("SQL-запрос:\n");
+        prompt.append("Пример 1. Прямой поиск по userId\n\n");
+        prompt.append("Шаблоны логов:\n");
+        prompt.append("Started mass sending communication. CommunicationId:{}. traceId:{}\n");
+        prompt.append("Communication recipients calculated. Result user ids to send:{}. traceId:{}\n");
+        prompt.append("Start send communication for userId:{}. traceId:{}\n");
+        prompt.append("Communication send successfully for userId:{}. traceId:{}\n\n");
+        prompt.append("Запрос пользователя: «Отправилось ли сообщение пользователю с userId 22?»\n");
+        prompt.append("Финальный ответ:\n");
         prompt.append("SELECT id, timestamp, log_level, message\n");
         prompt.append("FROM log_entries\n");
-        prompt.append("WHERE message ILIKE '%id=111%'\n");
+        prompt.append("WHERE message ILIKE '%userId:22%'\n");
         prompt.append("ORDER BY timestamp DESC;\n\n");
-        prompt.append("Ограничения и допущения:\n");
-        prompt.append("    Запрос найдет все логи, где упоминается id=111, включая начало, завершение или ошибку отправки. Пользователю нужно будет самостоятельно проанализировать message для определения финального статуса.\n\n");
         
-        prompt.append("Пример 2. Использование зависимостей через requestId\n\n");
-        prompt.append("Шаблоны Java:\n");
-        prompt.append("logger.info(\"start send message. userId={}, requestId={}\", user.getId(), requestId);\n");
-        prompt.append("logger.info(\"send completed success. requestId={}\", requestId);\n");
-        prompt.append("logger.warn(\"send failed. requestId={}\", requestId);\n\n");
-        prompt.append("Запрос пользователя:\n");
-        prompt.append("«Доставлено ли сообщение для пользователя с userId=abc-123-uuid?»\n\n");
-        prompt.append("Финальный ответ:\n\n");
-        prompt.append("Анализ и логика:\n");
-        prompt.append("Финальные логи о статусе доставки (send completed или send failed) не содержат userId, но содержат requestId. Поэтому для ответа на вопрос нужно сначала найти requestId, связанный с userId=abc-123-uuid, а затем по этому requestId найти логи о результате. Для этой двухшаговой логики используется CTE (WITH).\n\n");
-        prompt.append("SQL-запрос:\n");
-        prompt.append("WITH TargetRequest AS (\n");
-        prompt.append("  SELECT\n");
-        prompt.append("    REGEXP_SUBSTR(message, 'requestId=([a-zA-Z0-9-]+)', 1, 1, 'i', 1) as request_id\n");
-        prompt.append("  FROM log_entries\n");
-        prompt.append("  WHERE message ILIKE '%start send message. userId=abc-123-uuid%'\n");
+        prompt.append("Пример 2. Использование зависимостей через traceId\n\n");
+        prompt.append("Шаблоны логов:\n");
+        prompt.append("Start send communication for userId:{}. traceId:{}\n");
+        prompt.append("Communication send successfully for userId:{}. traceId:{}\n");
+        prompt.append("Communication send failed for userId:{}. traceId:{}. Reason:{}\n\n");
+        prompt.append("Запрос пользователя: «Доставлено ли сообщение для пользователя с userId=23 в трейсе 1?»\n");
+        prompt.append("Финальный ответ:\n");
+        prompt.append("WITH TargetTrace AS (\n");
+        prompt.append("    SELECT\n");
+        prompt.append("        REGEXP_SUBSTR(message, 'traceId:([a-zA-Z0-9-]+)', 1, 1, 'i', 1) as trace_id\n");
+        prompt.append("    FROM log_entries\n");
+        prompt.append("    WHERE message ILIKE '%Start send communication for userId:23%'\n");
         prompt.append(")\n");
         prompt.append("SELECT l.id, l.timestamp, l.log_level, l.message\n");
         prompt.append("FROM log_entries l\n");
-        prompt.append("JOIN TargetRequest tr ON l.message LIKE '%' || tr.request_id || '%'\n");
+        prompt.append("JOIN TargetTrace tt ON l.message LIKE '%' || tt.trace_id || '%'\n");
         prompt.append("WHERE\n");
-        prompt.append("  l.message ILIKE '%send completed success%' OR\n");
-        prompt.append("  l.message ILIKE '%send failed%' OR\n");
-        prompt.append("  l.message ILIKE '%start send message. userId=abc-123-uuid%'\n");
+        prompt.append("    l.message ILIKE '%Communication send successfully%' OR\n");
+        prompt.append("    l.message ILIKE '%Communication send failed%' OR\n");
+        prompt.append("    l.message ILIKE '%Start send communication for userId:23%'\n");
         prompt.append("ORDER BY l.timestamp DESC;\n\n");
-        prompt.append("Ограничения и допущения:\n");
-        prompt.append("    Если лог старта операции с userId отсутствует, запрос ничего не вернет, даже если логи о завершении с нужным requestId существуют в базе.\n\n");
         
         prompt.append("Пример 3. Поиск по неполным данным (Fallback-логика)\n\n");
-        prompt.append("Шаблоны Java:\n");
-        prompt.append("logger.info(\"User {} logged in from ip {}\", user.getName(), ipAddress);\n");
-        prompt.append("logger.error(\"Database connection failed: {}\", ex.getCause());\n");
-        prompt.append("logger.warn(\"High memory usage detected: {}%\", memoryPercent);\n\n");
-        prompt.append("Запрос пользователя:\n");
-        prompt.append("«Что случилось у пользователя john_doe?»\n\n");
-        prompt.append("Финальный ответ:\n\n");
-        prompt.append("Анализ и логика:\n");
-        prompt.append("Запрос \"что случилось\" является неоднозначным. Я делаю допущение, что пользователя интересуют в первую очередь проблемы и ошибки. Поэтому стратегия — найти все логи с уровнем ERROR или WARN, связанные с john_doe, а также логи входа, чтобы предоставить полный контекст.\n\n");
-        prompt.append("SQL-запрос:\n");
+        prompt.append("Шаблоны логов:\n");
+        prompt.append("Communication send skipped. User has no subscription. userId:{}, traceId:{}\n");
+        prompt.append("Communication send attemp failed for userId:{}. traceId:{}. Retrying\n");
+        prompt.append("Communication send failed for userId:{}. traceId:{}. Reason:{}\n\n");
+        prompt.append("Запрос пользователя: «Что случилось у пользователя 24?»\n");
+        prompt.append("Финальный ответ:\n");
         prompt.append("SELECT id, timestamp, log_level, message\n");
         prompt.append("FROM log_entries\n");
         prompt.append("WHERE\n");
-        prompt.append("  message ILIKE '%john_doe%' AND log_level IN ('ERROR', 'WARN')\n");
-        prompt.append("  OR message ILIKE '%User john_doe logged in%'\n");
+        prompt.append("    (message ILIKE '%userId:24%' AND log_level IN ('ERROR', 'WARN'))\n");
+        prompt.append("    OR message ILIKE '%userId:24%'\n");
         prompt.append("ORDER BY timestamp DESC;\n\n");
-        prompt.append("Ограничения и допущения:\n");
-        prompt.append("    Допущение: Предполагается, что \"случилось\" означает \"произошли ошибки или важные события\".\n");
-        prompt.append("    Этот запрос может не показать полную картину, если проблема была вызвана событиями, которые логируются с уровнем INFO.\n\n");
         
-        prompt.append("Входные данные:\n\n");
+        prompt.append("[Входные данные]\n\n");
         prompt.append("Запрос пользователя:\n");
         prompt.append(userQuery).append("\n\n");
         
@@ -254,17 +228,26 @@ public class DeepSeekService {
             JsonNode jsonNode = objectMapper.readTree(response);
             String content = jsonNode.path("choices").get(0).path("message").path("content").asText();
             
-            // Extract SQL from ```sql blocks
-            if (content.contains("```sql")) {
-                int start = content.indexOf("```sql") + 6;
-                int end = content.indexOf("```", start);
+            // Since the new prompt returns clean SQL without markdown formatting,
+            // we just need to trim and return the content directly
+            String sql = content.trim();
+            
+            // Remove any potential markdown formatting if it exists
+            if (sql.startsWith("```sql")) {
+                int start = sql.indexOf("```sql") + 6;
+                int end = sql.indexOf("```", start);
                 if (end > start) {
-                    return content.substring(start, end).trim();
+                    sql = sql.substring(start, end).trim();
+                }
+            } else if (sql.startsWith("```")) {
+                int start = sql.indexOf("```") + 3;
+                int end = sql.indexOf("```", start);
+                if (end > start) {
+                    sql = sql.substring(start, end).trim();
                 }
             }
             
-            // If no SQL block found, return the content as is
-            return content.trim();
+            return sql;
         } catch (Exception e) {
             logger.error("Error extracting SQL from response", e);
             throw new RuntimeException("Failed to extract SQL from response");
