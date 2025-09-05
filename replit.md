@@ -31,8 +31,8 @@ Full-stack web application for log analysis using Java Spring Boot backend, Reac
 
 ## Recent Changes
 - ✅ Complete project setup with full-stack architecture
-- ✅ Implemented two-step DeepSeek integration for log analysis:
-  1. SQL Generation: Converts natural language to SQL queries
+- ✅ Implemented advanced two-step DeepSeek integration for log analysis:
+  1. SQL Generation: Advanced prompt with step-by-step analysis, CTEs, JOINs, and H2-optimized functions
   2. Log Analysis: Analyzes retrieved logs for human-readable insights
 - ✅ Created CRUD operations for log patterns and settings management
 - ✅ Added CRUD operations for log entries management in Settings tab
