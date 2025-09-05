@@ -57,55 +57,62 @@ public class DeepSeekService {
     private String buildSqlGenerationPrompt(String userQuery, List<LogPattern> patterns) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("Ты — помощник для генерации SQL-запросов к базе данных H2, где хранятся логи в таблице log_entries.\n\n");
-        prompt.append("Тебе дана структура таблицы log_entries и шаблоны логов из исходного кода.\n");
-        prompt.append("На основе запроса пользователя нужно построить SQL-запрос для извлечения релевантных логов, которые помогут ответить на запрос.\n");
-        prompt.append("Запрос должен учитывать ВСЕ релевантные шаблоны логов: успешные, неуспешные и промежуточные операции, чтобы дать полную картину.\n\n");
+        prompt.append("Твоя задача: по пользовательскому запросу строить корректный SQL, который находит релевантные записи логов, основываясь исключительно на предоставленных шаблонах логов и структуре таблицы.\n\n");
         
-        prompt.append("### 🔑 Правила построения SQL:\n\n");
-        prompt.append("1. **Пошаговый анализ запроса**\n");
-        prompt.append("   - Определи ключевые сущности (например: userId, requestId, userName, email, sessionId и т.д.) и операции (например: отправка сообщения).\n");
-        prompt.append("   - Учти, что идентификаторы могут быть строками, UUID, email-адресами, числами и т.д.\n\n");
+        prompt.append("🔑 Основные правила построения SQL\n\n");
         
-        prompt.append("2. **Зависимости между логами**\n");
-        prompt.append("   - Если для ответа по целевым логам нужны промежуточные данные (например, нужно сначала найти requestId по userId), используй CTE (`WITH … AS`).\n");
-        prompt.append("   - Для связывания логов используй `JOIN` или `IN`.\n\n");
+        prompt.append("1. Анализ пользовательского запроса\n");
+        prompt.append("   • Определи ключевые сущности (например: userId, requestId, userName, email, sessionId) и действия, о которых спрашивает пользователь (например: отправка сообщения, логин).\n");
+        prompt.append("   • Используй только те сущности и ключи, которые гарантированно встречаются в логах по предоставленным шаблонам.\n");
+        prompt.append("   • Не добавляй условий фильтрации по ключам, отсутствующим в логах.\n");
+        prompt.append("   • ❌ Нельзя: добавлять UPPER(message) LIKE '%ip=%', если в шаблонах нет ip=.\n");
+        prompt.append("   • ✅ Можно: использовать UPPER(message) LIKE '%logged in from%', если это есть в шаблоне.\n\n");
         
-        prompt.append("3. **Извлечение значений из messages**\n");
-        prompt.append("   - Для извлечения используем H2-функции с регулярками:\n");
-        prompt.append("     - `REGEXP_SUBSTR(message, 'ключ=([^ ]+)', 1, 1, '', 1)`\n");
-        prompt.append("     - или `SUBSTRING(message FROM 'ключ=([^ ]+)')`\n");
-        prompt.append("   - Всегда рассматривай результат как строку.\n\n");
+        prompt.append("2. Зависимости между логами\n");
+        prompt.append("   • Если для ответа нужно связывать логи по requestId, id, sessionId, используй CTE (WITH …) для предварительного извлечения значений.\n");
+        prompt.append("   • Для связи таблиц внутри log_entries используй JOIN или IN, но только по данным, которые точно есть в шаблонах.\n");
+        prompt.append("   • ❌ Запрещено выдумывать дополнительные поля (например, transactionId), если их нет в шаблонах.\n\n");
         
-        prompt.append("4. **Фильтрация**\n");
-        prompt.append("   - Для поиска подстрок: `UPPER(message) LIKE UPPER('%pattern%')` (регистронезависимый поиск).\n");
-        prompt.append("   - Для множественных вариантов: `IN`.\n");
-        prompt.append("   - В плейсхолдерах из кода использовать `%` или регулярные выражения.\n\n");
+        prompt.append("3. Извлечение значений из message\n");
+        prompt.append("   • Для извлечения данных из строки используй H2-функции с регэкспами:\n");
+        prompt.append("     - REGEXP_SUBSTR(message, 'ключ=([^ ]+)', 1, 1, '', 1)\n");
+        prompt.append("     - SUBSTRING(message FROM 'ключ=([^ ]+)')\n");
+        prompt.append("   • Все значения трактуй как строки.\n\n");
         
-        prompt.append("5. **Результат**\n");
-        prompt.append("   - Всегда возвращай `id, timestamp, log_level, message`.\n");
-        prompt.append("   - Обязательно добавляй:\n");
-        prompt.append("     - `ORDER BY timestamp DESC`\n");
-        prompt.append("     - `LIMIT 1000`\n");
-        prompt.append("   - Используй только таблицу `log_entries`.\n\n");
+        prompt.append("4. Фильтрация\n");
+        prompt.append("   • Для поиска подстрок используй UPPER(message) LIKE UPPER('%pattern%') (регистронезависимый LIKE).\n");
+        prompt.append("   • Для множественных возможных значений — IN.\n");
+        prompt.append("   • Для плейсхолдеров ({} в коде) используй подстановку %.\n");
+        prompt.append("   • Всегда опирайся только на реально встречающиеся подстроки из шаблонов.\n\n");
         
-        prompt.append("### 📖 Примеры\n\n");
-        prompt.append("#### Пример 1 (простой)\n");
-        prompt.append("Запрос: «Отправилось ли сообщение пользователю с id 111?»\n");
-        prompt.append("```sql\n");
+        prompt.append("5. Результат\n");
+        prompt.append("   • Всегда выводи: SELECT id, timestamp, log_level, message\n");
+        prompt.append("   • Обязательно добавляй: ORDER BY timestamp DESC;\n\n");
+        
+        prompt.append("📖 Примеры\n\n");
+        prompt.append("Пример 1. Прямой поиск по id\n");
+        prompt.append("Шаблоны:\n");
+        prompt.append("logger.info(\"start send message for userName={} and id={}\", user.getName(), user.getId());\n");
+        prompt.append("logger.info(\"message send completed for id={}\", user.getId());\n");
+        prompt.append("logger.error(\"message send failed for id={}\", user.getId());\n\n");
+        prompt.append("Запрос пользователя: «Отправилось ли сообщение пользователю с id 111?»\n\n");
+        prompt.append("SQL:\n");
         prompt.append("SELECT id, timestamp, log_level, message\n");
         prompt.append("FROM log_entries\n");
         prompt.append("WHERE UPPER(message) LIKE UPPER('%id=111%')\n");
-        prompt.append("ORDER BY timestamp DESC\n");
-        prompt.append("LIMIT 1000;\n");
-        prompt.append("```\n\n");
+        prompt.append("ORDER BY timestamp DESC;\n\n");
         
-        prompt.append("#### Пример 2 (с зависимостью)\n");
-        prompt.append("Запрос: «Доставлено ли сообщение для пользователя с userId=abc-123-uuid?»\n");
-        prompt.append("```sql\n");
+        prompt.append("Пример 2. Использование зависимостей (связка через requestId)\n");
+        prompt.append("Шаблоны:\n");
+        prompt.append("logger.info(\"start send message. userId={}, requestId={}\", user.getId(), requestId);\n");
+        prompt.append("logger.info(\"send completed success. requestId={}\", requestId);\n");
+        prompt.append("logger.warn(\"send failed. requestId={}\", requestId);\n\n");
+        prompt.append("Запрос пользователя: «Доставлено ли сообщение для пользователя с userId=abc-123-uuid?»\n\n");
+        prompt.append("SQL:\n");
         prompt.append("WITH request_ids AS (\n");
-        prompt.append("    SELECT REGEXP_SUBSTR(message, 'requestId=([^ ]+)', 1, 1, '', 1) AS requestId\n");
-        prompt.append("    FROM log_entries\n");
-        prompt.append("    WHERE UPPER(message) LIKE UPPER('%start send message. userid=abc-123-uuid%')\n");
+        prompt.append("  SELECT REGEXP_SUBSTR(message, 'requestId=([^ ]+)', 1, 1, '', 1) AS requestId\n");
+        prompt.append("  FROM log_entries\n");
+        prompt.append("  WHERE UPPER(message) LIKE UPPER('%start send message. userid=abc-123-uuid%')\n");
         prompt.append(")\n");
         prompt.append("SELECT l.id, l.timestamp, l.log_level, l.message\n");
         prompt.append("FROM log_entries l\n");
@@ -113,25 +120,29 @@ public class DeepSeekService {
         prompt.append("WHERE UPPER(l.message) LIKE UPPER('%send completed success.%')\n");
         prompt.append("   OR UPPER(l.message) LIKE UPPER('%send failed.%')\n");
         prompt.append("   OR UPPER(l.message) LIKE UPPER('%start send message.%')\n");
-        prompt.append("ORDER BY l.timestamp DESC\n");
-        prompt.append("LIMIT 1000;\n");
-        prompt.append("```\n\n");
+        prompt.append("ORDER BY l.timestamp DESC;\n\n");
         
+        prompt.append("🎯 Итог\n");
+        prompt.append("Всегда:\n");
+        prompt.append("• Используй только реально существующие подстроки и ключи из шаблонов.\n");
+        prompt.append("• Верни только 1 sql запрос, который точно поможет найти релевантные логи.\n");
+        prompt.append("• Не придумывай новые поля.\n");
+        prompt.append("• Возвращай id, timestamp, log_level, message с ORDER BY timestamp DESC.\n\n");
+        
+        prompt.append("Данные для генерации:\n");
         prompt.append("Структура таблицы log_entries:\n");
         prompt.append("id BIGINT,\n");
         prompt.append("timestamp TIMESTAMP,\n");
         prompt.append("log_level VARCHAR,\n");
         prompt.append("message VARCHAR\n\n");
         
+        prompt.append("Запрос пользователя:\n");
+        prompt.append(userQuery).append("\n\n");
+        
         prompt.append("Шаблоны логов из кода:\n");
         for (LogPattern pattern : patterns) {
             prompt.append(pattern.getLogTemplate()).append("\n");
         }
-        
-        prompt.append("\nЗапрос пользователя:\n");
-        prompt.append("\"").append(userQuery).append("\"");
-        prompt.append("\n\nОсобые инструкции:\n");
-        prompt.append("Верни только sql запрос без дополнительной информации или вопросов");
         
         return prompt.toString();
     }
