@@ -1,8 +1,18 @@
 package com.loganalyzer.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "log_patterns")
 public class LogPattern {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @Column(name = "log_level", nullable = false)
     private String logLevel;
+    
+    @Column(name = "log_template", nullable = false, length = 500)
     private String logTemplate;
 
     public LogPattern() {}
