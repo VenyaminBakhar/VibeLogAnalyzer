@@ -56,4 +56,4 @@ externalPort = 8080
 [deployment]
 deploymentTarget = "autoscale"
 run = ["java", "-jar", "target/log-analyzer-1.0.0.jar", "--server.port=5000"]
-build = ["bash", "-c", "npm run build && mkdir -p src/main/resources/static && cp -r dist/* src/main/resources/static/ && mvn clean package -DskipTests"]
+build = ["bash", "-c", "cd /home/runner/workspace && npm ci --no-fund --no-audit && npm run build && mkdir -p src/main/resources/static && cp -r dist/* src/main/resources/static/ && mvn clean package -DskipTests"]
