@@ -1,0 +1,30 @@
+add data via api calls.
+log patterns(add template exactly as it provided. Correct: "logger.info("Started mass sending communication. CommunicationId:{}. traceId:{}", communication.getId(), traceId);". Incorrect: "Started mass sending communication. CommunicationId:{}. traceId:{}"):
+logger.info("Started mass sending communication. CommunicationId:{}. traceId:{}", communication.getId(), traceId);
+logger.info("Communication recipients calculated. Result user ids to send:{}. traceId:{}", resultUserIdList.toString(), traceId);
+logger.info("Communication send skipped. User has no subscription. userId:{}, traceId:{}", useId, traceId);
+logger.info("Start send communication for userId:{}. traceId:{}", userId, traceId);
+logger.info("Communication send successfully for userId:{}. traceId:{}", userId, traceId);
+logger.warn("Communication send attemp failed for userId:{}. traceId:{}. Retrying", userId, traceId);
+logger.error("Communication send failed for userId:{}. traceId:{}. Reason:{}", userId, traceId, ex.getCause());
+
+add log entries:
+05.09.2025 17:29:00 info "Started mass sending communication. CommunicationId:12345. traceId:1"
+05.09.2025 17:30:00 info "Communication recipients calculated. Result user ids to send: 22, 23, 24, 25, 29. traceId:1"
+05.09.2025 17:31:00 "Communication send skipped. User has no subscription. userId:25, traceId:1"
+05.09.2025 17:31:00 "Communication send skipped. User has no subscription. userId:29, traceId:1"
+05.09.2025 17:31:00 info "Start send communication for userId:22. traceId:1"
+05.09.2025 17:31:00 info "Start send communication for userId:23. traceId:1"
+05.09.2025 17:31:00 info "Start send communication for userId:24. traceId:1"
+05.09.2025 17:32:00 info "Communication send successfully for userId:22. traceId:1"
+05.09.2025 17:32:00 info "Communication send successfully for userId:23. traceId:1"
+05.09.2025 17:33:00 warn "Communication send attemp failed for userId:24. traceId:1. Retrying"
+05.09.2025 17:34:00 error "Communication send failed for userId:24. traceId:1. Reason: client in a spam list"
+05.09.2025 18:29:00 info "Started mass sending communication. CommunicationId:99999. traceId:2"
+05.09.2025 18:30:00 info "Communication recipients calculated. Result user ids to send: 22, 23, 24. traceId:2"
+05.09.2025 18:31:00 info "Start send communication for userId:22. traceId:2"
+05.09.2025 18:31:00 info "Start send communication for userId:23. traceId:2"
+05.09.2025 18:31:00 info "Start send communication for userId:24. traceId:2"
+05.09.2025 18:32:00 info "Communication send successfully for userId:22. traceId:2"
+05.09.2025 18:32:00 info "Communication send successfully for userId:23. traceId:2"
+05.09.2025 18:32:00 info "Communication send successfully for userId:24. traceId:2"
