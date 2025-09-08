@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { LogPattern, LogEntry, QueryRequest, QueryResponse } from './types';
 
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8080/api`;
+// Use port 8080 for development, same port for production
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname.includes('replit.dev')
+  ? `${window.location.protocol}//${window.location.hostname}:8080/api`
+  : `${window.location.protocol}//${window.location.hostname}/api`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
