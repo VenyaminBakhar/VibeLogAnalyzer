@@ -261,8 +261,8 @@ const SettingsTab: React.FC = () => {
                       {editingPattern?.id === pattern.id ? (
                         <select
                           className="form-control"
-                          value={editingPattern.logLevel}
-                          onChange={(e) => setEditingPattern({ ...editingPattern, logLevel: e.target.value })}
+                          value={editingPattern?.logLevel || ''}
+                          onChange={(e) => setEditingPattern(prev => prev ? { ...prev, logLevel: e.target.value } : null)}
                         >
                           <option value="INFO">INFO</option>
                           <option value="ERROR">ERROR</option>
@@ -278,8 +278,8 @@ const SettingsTab: React.FC = () => {
                         <input
                           type="text"
                           className="form-control"
-                          value={editingPattern.logTemplate}
-                          onChange={(e) => setEditingPattern({ ...editingPattern, logTemplate: e.target.value })}
+                          value={editingPattern?.logTemplate || ''}
+                          onChange={(e) => setEditingPattern(prev => prev ? { ...prev, logTemplate: e.target.value } : null)}
                         />
                       ) : (
                         pattern.logTemplate
